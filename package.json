@@ -7,6 +7,9 @@
   "version": "1.0.0",
   "main": "snyk-to-sarif.js",
   "devDependencies": {},
+  "bin": {
+    "snyk-to-sarif": "./snyk-to-sarif.js"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 const fs = require('fs');
 const { argv } = require('process');
 const yargs = require('yargs');
