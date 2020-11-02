@@ -22,3 +22,7 @@ Usage of the tool follows the following format:
 `-o, --output <Output>`        Name of the file to output to (SARIF FORMAT), if not specified the content will be printed to screen (To allow for piping).
 
 `-i, --input <Input>`    Path to a snyk json file to read as input, note this take precendence over piped input.
+
+`-v, --verbose `    Prints additional debug information.
+
+`-h, --help`     Prints the help prompt
