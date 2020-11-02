@@ -43,7 +43,7 @@ async function convertProject(projectData) {
         ];                     
 
         if("CWE" in vulnerability.identifiers) {
-            tags = vulnerability.identifiers.CWE.concat(tags);  // ASH COMMENT -- I removed the push and added the security tag above, then inverted the concat here so security would remain the last tag
+            tags = vulnerability.identifiers.CWE.concat(tags);
         }
 
         if (vulnerability.severity == "high") {
