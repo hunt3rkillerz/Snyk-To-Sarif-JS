@@ -40,10 +40,13 @@ async function convertProject(projectData) {
         let severity = "warning";
         let tags  = [ 
             "security"
-        ];                     
-
-        if("CWE" in vulnerability.identifiers) {
-            tags = vulnerability.identifiers.CWE.concat(tags);
+        ];        
+           
+        // Make sure the vuln does have identifiers          
+        if(vulnerability.identifiers) {
+            if("CWE" in vulnerability.identifiers) {
+                tags = vulnerability.identifiers.CWE.concat(tags);
+            }
         }
 
         if (vulnerability.severity == "high") {
