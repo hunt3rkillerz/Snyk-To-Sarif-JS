@@ -28,20 +28,109 @@ async function createSarif(vulnerabilities, rules) {
     }
 }
 
+async function convertIACProj(projectData) {
+    const ruleList = {};   
+    const vulnList = [];
+    const vulnArr = projectData.infrastructureAsCodeIssues;
+    const affectedFile = projectData.targetFile;
+
+
+    // Scans a Snyk IaC File
+    for(let i = 0; i < vulnArr.length; i++) {
+        const vulnerability = vulnArr[i]; 
+
+        // Check if this is wanted as part of the results
+        if (vulnerability.isIgnored) {
+            continue;
+        }
+
+        let severity = "warning";
+        let tags  = [ 
+            "security",
+            // OWASP Top Ten 2017 Category A6 - Security Misconfiguration
+            "CWE-1032"
+        ];        
+
+        if (vulnerability.severity == "high") {
+            severity = "error";
+        }
+
+        const formattedText = "## Overview\n" 
+            + vulnerability.iacDescription.issue
+            + "\n\n## Impact\n\n" + vulnerability.iacDescription.impact
+            + "\n\n## Remediation\n\n" + vulnerability.iacDescription.resolve;
+    
+        ruleList[vulnerability.id] = {
+            id: vulnerability.id,
+            shortDescription: {
+                text:  vulnerability.title
+            },
+            fullDescription: { 
+                text: vulnerability.iacDescription.issue
+            },
+            help: {
+                markdown: formattedText,
+                text: "",
+            },
+            defaultConfiguration: {
+                level: severity 
+            },
+            properties: {
+                tags: tags
+            },
+        }
+    
+        vulnList.push({
+            ruleId: vulnerability.id,
+            message: { 
+                text: vulnerability.title
+            },
+            locations: [
+                {
+                    "physicalLocation": {
+                        "artifactLocation": {
+                            "uri": affectedFile,  
+                        },
+                        "region": {
+                            "startLine": vulnerability.lineNumber,
+                            "startColumn": 1
+                        }
+                    }
+
+                }
+            ],
+        });
+    }
+
+    return {
+        vulnerabilities: vulnList,
+        rules: ruleList,
+    };
+
+}
+
 // Converts Snyk Project data into a set of "Rules" and "Vulnerability" objects using SARIF templates
 async function convertProject(projectData) {
+    // Check for IaC projects
+    if (projectData.infrastructureAsCodeIssues) {
+        return await convertIACProj(projectData)
+    }
+
     const ruleList = {};   
     const vulnList = [];
     const vulnArr = projectData.vulnerabilities;
     const affectedFile = projectData.displayTargetFile;
 
+    
+
+    // Scans a Snyk Dependencies File
     for(let i = 0; i < vulnArr.length; i++) {
         const vulnerability = vulnArr[i]; 
         let severity = "warning";
         let tags  = [ 
             "security"
         ];        
-           
+
         // Make sure the vuln does have identifiers          
         if(vulnerability.identifiers) {
             if("CWE" in vulnerability.identifiers) {

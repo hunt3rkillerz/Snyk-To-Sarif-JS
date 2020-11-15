@@ -4,7 +4,7 @@
   },
   "name": "snyk-to-sarif",
   "description": "A node module that can be used to convert Snyk projects to the SARIF format. This tool is inspired by [https://github.com/garethr/snyk-to-sarif](https://github.com/garethr/snyk-to-sarif). However, it is designed to support multi-project Snyk outputs and also is built in NodeJS to be inline with other Snyk integrations and the CLI itself.",
-  "version": "1.0.5",
+  "version": "1.1.0",
   "main": "./snyk-to-sarif.js",
   "devDependencies": {},
   "bin": "./snyk-to-sarif.js",
