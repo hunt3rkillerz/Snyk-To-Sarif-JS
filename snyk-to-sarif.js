@@ -6,6 +6,38 @@ const yargs = require('yargs');
 //Verbosity Setting
 let verbose = false
 
+// Snyk severity
+// https://support.snyk.io/hc/en-us/articles/4403987394961-Severity-levels
+const SEVERITY = {
+    LOW: "low",
+    MEDIUM: "medium",
+    HIGH: "high",
+    CRITICAL: "critical"
+}
+
+// SARIF level
+// https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json
+const LEVEL = {
+    NONE: "none",
+    NOTE: "note",
+    WARNING: "warning",
+    ERROR: "error"
+}
+
+// Convert severity (snyk) to level (SARIF)
+function severityToLevel(severity) {
+    switch (severity) {
+        case SEVERITY.LOW:
+            return LEVEL.NOTE;
+        case SEVERITY.MEDIUM:
+            return LEVEL.WARNING;
+        case SEVERITY.HIGH:
+            return LEVEL.WARNING;
+        case SEVERITY.CRITICAL:
+            return LEVEL.ERROR;
+    }
+}
+
 // Packages vulnerability and rule data into the main SARIF object structure
 async function createSarif(vulnerabilities, rules) {
     return {
@@ -82,6 +114,7 @@ async function convertIACProj(projectData) {
 
         vulnList.push({
             ruleId: vulnerability.id,
+            level: severityToLevel(vulnerability.severity),
             message: {
                 text: vulnerability.title
             },
@@ -168,6 +201,7 @@ async function convertProject(projectData) {
 
         vulnList.push({
             ruleId: vulnerability.id,
+            level: severityToLevel(vulnerability.severity),
             message: {
                 text: "This adds a vulnerable dependency "
                     + vulnerability.packageName
