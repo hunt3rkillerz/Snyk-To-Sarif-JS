@@ -44,7 +44,7 @@ async function convertIACProj(projectData) {
             continue;
         }
 
-        let severity = "warning";
+        let severityInRuleList = "warning";
         let tags = [
             "security",
             // OWASP Top Ten 2017 Category A6 - Security Misconfiguration
@@ -52,7 +52,7 @@ async function convertIACProj(projectData) {
         ];
 
         if (vulnerability.severity == "high") {
-            severity = "error";
+            severityInRuleList = "error";
         }
 
         const formattedText = "## Overview\n"
@@ -73,7 +73,7 @@ async function convertIACProj(projectData) {
                 text: "",
             },
             defaultConfiguration: {
-                level: severity
+                level: severityInRuleList
             },
             properties: {
                 tags: tags
@@ -126,7 +126,7 @@ async function convertProject(projectData) {
     // Scans a Snyk Dependencies File
     for (let i = 0; i < vulnArr.length; i++) {
         const vulnerability = vulnArr[i];
-        let severity = "warning";
+        let severityInRuleList = "warning";
         let tags = [
             "security"
         ];
@@ -139,7 +139,7 @@ async function convertProject(projectData) {
         }
 
         if (vulnerability.severity == "high") {
-            severity = "error";
+            severityInRuleList = "error";
         }
 
         ruleList[vulnerability.id] = {
@@ -159,7 +159,7 @@ async function convertProject(projectData) {
                 text: "",
             },
             defaultConfiguration: {
-                level: severity
+                level: severityInRuleList
             },
             properties: {
                 tags: tags
