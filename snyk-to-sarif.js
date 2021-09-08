@@ -32,7 +32,7 @@ function severityToLevel(severity) {
         case SEVERITY.MEDIUM:
             return LEVEL.WARNING;
         case SEVERITY.HIGH:
-            return LEVEL.WARNING;
+            return LEVEL.ERROR;
         case SEVERITY.CRITICAL:
             return LEVEL.ERROR;
     }
