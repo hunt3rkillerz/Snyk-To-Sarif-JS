@@ -6,6 +6,38 @@ const yargs = require('yargs');
 //Verbosity Setting
 let verbose = false
 
+// Snyk severity
+// https://support.snyk.io/hc/en-us/articles/4403987394961-Severity-levels
+const SEVERITY = {
+    LOW: "low",
+    MEDIUM: "medium",
+    HIGH: "high",
+    CRITICAL: "critical"
+}
+
+// SARIF level
+// https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json
+const LEVEL = {
+    NONE: "none",
+    NOTE: "note",
+    WARNING: "warning",
+    ERROR: "error"
+}
+
+// Convert severity (snyk) to level (SARIF)
+function severityToLevel(severity) {
+    switch (severity) {
+        case SEVERITY.LOW:
+            return LEVEL.NOTE;
+        case SEVERITY.MEDIUM:
+            return LEVEL.WARNING;
+        case SEVERITY.HIGH:
+            return LEVEL.ERROR;
+        case SEVERITY.CRITICAL:
+            return LEVEL.ERROR;
+    }
+}
+
 // Packages vulnerability and rule data into the main SARIF object structure
 async function createSarif(vulnerabilities, rules) {
     return {
@@ -16,7 +48,7 @@ async function createSarif(vulnerabilities, rules) {
                 tool: {
                     driver: {
                         name: "Snyk",
-                        rules: Object.keys(rules).map(function(key) {
+                        rules: Object.keys(rules).map(function (key) {
                             // Retreiving all entries in the dictionary
                             return rules[key];
                         }),
@@ -29,43 +61,43 @@ async function createSarif(vulnerabilities, rules) {
 }
 
 async function convertIACProj(projectData) {
-    const ruleList = {};   
+    const ruleList = {};
     const vulnList = [];
     const vulnArr = projectData.infrastructureAsCodeIssues;
     const affectedFile = projectData.targetFile;
 
 
     // Scans a Snyk IaC File
-    for(let i = 0; i < vulnArr.length; i++) {
-        const vulnerability = vulnArr[i]; 
+    for (let i = 0; i < vulnArr.length; i++) {
+        const vulnerability = vulnArr[i];
 
         // Check if this is wanted as part of the results
         if (vulnerability.isIgnored) {
             continue;
         }
 
-        let severity = "warning";
-        let tags  = [ 
+        let severityInRuleList = "warning";
+        let tags = [
             "security",
             // OWASP Top Ten 2017 Category A6 - Security Misconfiguration
             "CWE-1032"
-        ];        
+        ];
 
         if (vulnerability.severity == "high") {
-            severity = "error";
+            severityInRuleList = "error";
         }
 
-        const formattedText = "## Overview\n" 
+        const formattedText = "## Overview\n"
             + vulnerability.iacDescription.issue
             + "\n\n## Impact\n\n" + vulnerability.iacDescription.impact
             + "\n\n## Remediation\n\n" + vulnerability.iacDescription.resolve;
-    
+
         ruleList[vulnerability.id] = {
             id: vulnerability.id,
             shortDescription: {
-                text:  vulnerability.title
+                text: vulnerability.title
             },
-            fullDescription: { 
+            fullDescription: {
                 text: vulnerability.iacDescription.issue
             },
             help: {
@@ -73,23 +105,24 @@ async function convertIACProj(projectData) {
                 text: "",
             },
             defaultConfiguration: {
-                level: severity 
+                level: severityInRuleList
             },
             properties: {
                 tags: tags
             },
         }
-    
+
         vulnList.push({
             ruleId: vulnerability.id,
-            message: { 
+            level: severityToLevel(vulnerability.severity),
+            message: {
                 text: vulnerability.title
             },
             locations: [
                 {
                     "physicalLocation": {
                         "artifactLocation": {
-                            "uri": affectedFile,  
+                            "uri": affectedFile,
                         },
                         "region": {
                             "startLine": vulnerability.lineNumber,
@@ -116,38 +149,38 @@ async function convertProject(projectData) {
         return await convertIACProj(projectData)
     }
 
-    const ruleList = {};   
+    const ruleList = {};
     const vulnList = [];
     const vulnArr = projectData.vulnerabilities;
     const affectedFile = projectData.displayTargetFile;
 
-    
+
 
     // Scans a Snyk Dependencies File
-    for(let i = 0; i < vulnArr.length; i++) {
-        const vulnerability = vulnArr[i]; 
-        let severity = "warning";
-        let tags  = [ 
+    for (let i = 0; i < vulnArr.length; i++) {
+        const vulnerability = vulnArr[i];
+        let severityInRuleList = "warning";
+        let tags = [
             "security"
-        ];        
+        ];
 
         // Make sure the vuln does have identifiers          
-        if(vulnerability.identifiers) {
-            if("CWE" in vulnerability.identifiers) {
+        if (vulnerability.identifiers) {
+            if ("CWE" in vulnerability.identifiers) {
                 tags = vulnerability.identifiers.CWE.concat(tags);
             }
         }
 
         if (vulnerability.severity == "high") {
-            severity = "error";
+            severityInRuleList = "error";
         }
-    
+
         ruleList[vulnerability.id] = {
             id: vulnerability.id,
             shortDescription: {
-                text:  vulnerability.title + " - " + vulnerability.packageName
+                text: vulnerability.title + " - " + vulnerability.packageName
             },
-            fullDescription: { 
+            fullDescription: {
                 text: "The dependency " /
                     + vulnerability.packageName
                     + " introduces a "
@@ -159,16 +192,17 @@ async function convertProject(projectData) {
                 text: "",
             },
             defaultConfiguration: {
-                level: severity 
+                level: severityInRuleList
             },
             properties: {
                 tags: tags
             },
         }
-    
+
         vulnList.push({
             ruleId: vulnerability.id,
-            message: { 
+            level: severityToLevel(vulnerability.severity),
+            message: {
                 text: "This adds a vulnerable dependency "
                     + vulnerability.packageName
                     + " which introduces a "
@@ -179,7 +213,7 @@ async function convertProject(projectData) {
                 {
                     "physicalLocation": {
                         "artifactLocation": {
-                            "uri": affectedFile,  
+                            "uri": affectedFile,
                         }
                     }
                 }
@@ -198,10 +232,10 @@ async function squashMultiProject(snykData) {
     let vulnerabilityList = [];
 
     // Process the data
-    for(let i = 0; i < snykData.length; i++) {
+    for (let i = 0; i < snykData.length; i++) {
         // Grab the vulns and rules out of the project
-        const { vulnerabilities, rules } = await convertProject(snykData[i]);   
-        
+        const { vulnerabilities, rules } = await convertProject(snykData[i]);
+
         // Merge in the vulns into our list
         vulnerabilityList = vulnerabilityList.concat(vulnerabilities);
 
@@ -219,42 +253,42 @@ function printHelp() {
         -o, --output  | Allows a sarif output file path to be specified by the user
         -v, --verbose | Prints additional debug information
         -h, --help    | Prints the help prompt
-    `); 
+    `);
 }
 
 async function run(data, outputFile) {
     let snykJson, sarifData;
     try {
         snykJson = JSON.parse(data);
-    } catch(e) { 
-        if(verbose) {
+    } catch (e) {
+        if (verbose) {
             console.error(e);
         }
         console.error("The input data does not appear to be valid");
         return;
     }
 
-    if(Array.isArray(snykJson)) {
+    if (Array.isArray(snykJson)) {
         sarifData = await squashMultiProject(snykJson);
-    } else { 
-        const { vulnerabilities, rules } = await convertProject(snykJson); 
+    } else {
+        const { vulnerabilities, rules } = await convertProject(snykJson);
         sarifData = await createSarif(vulnerabilities, rules);
     }
 
-    if(outputFile) {
+    if (outputFile) {
         fs.writeFileSync(outputFile, JSON.stringify(sarifData));
-    } else {    
+    } else {
         console.log(JSON.stringify(sarifData));
     }
 }
 
 async function processCommandLineArgs() {
     let snykFile;
-    
+
     // Get command line args
     const argv = yargs(process.argv.slice(2)).argv;
-    
-    const inputFile = argv.i || argv.input; 
+
+    const inputFile = argv.i || argv.input;
     const outputFile = argv.o || argv.output;
 
     // Print the help prompt and end the program
@@ -264,17 +298,17 @@ async function processCommandLineArgs() {
     }
 
     // Toggle Verbosity
-    if(argv.v != undefined || argv.verbose != undefined) {
+    if (argv.v != undefined || argv.verbose != undefined) {
         verbose = true;
     }
 
 
     // Checking if an input file is provided
-    if (inputFile) {    
+    if (inputFile) {
 
-        if(fs.existsSync(inputFile)) {
+        if (fs.existsSync(inputFile)) {
             snykFile = fs.readFileSync(inputFile, 'utf8');
-        } else { 
+        } else {
             console.log("Provided input file does not exist");
             return
         }
@@ -285,12 +319,12 @@ async function processCommandLineArgs() {
         let data = ""
         process.stdin.setEncoding('utf8');
 
-        process.stdin.on('data', function(chunk) {
+        process.stdin.on('data', function (chunk) {
             data += chunk;
             pipeData = true;
         });
 
-        process.stdin.on('end', function() {
+        process.stdin.on('end', function () {
             run(data, outputFile);
         });
 
